@@ -1,4 +1,5 @@
 //! ITerm2 protocol implementation.
+#[cfg(not(feature = "vb64"))]
 use base64::{engine::general_purpose, Engine};
 use image::{codecs::jpeg::JpegEncoder, DynamicImage, Rgb};
 use ratatui::{buffer::Buffer, layout::Rect};
@@ -40,7 +41,12 @@ impl FixedIterm2 {
 fn encode(img: DynamicImage, is_tmux: bool) -> Result<String> {
     let mut jpg = vec![];
     JpegEncoder::new_with_quality(&mut jpg, 75).encode_image(&img)?;
+
+	#[cfg(not(feature = "vb64"))]
     let data = general_purpose::STANDARD.encode(&jpg);
+
+	#[cfg(feature = "vb64")]
+	let data = vb64::encode(&jpg);
 
     let (start, end) = if is_tmux {
         ("\x1bPtmux;\x1b\x1b", "\x1b\\")

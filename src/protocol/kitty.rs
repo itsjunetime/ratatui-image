@@ -1,6 +1,7 @@
 /// https://sw.kovidgoyal.net/kitty/graphics-protocol/#unicode-placeholders
 use std::format;
 
+#[cfg(not(feature = "vb64"))]
 use base64::{engine::general_purpose, Engine};
 use image::{DynamicImage, Rgb};
 use ratatui::{buffer::Buffer, layout::Rect};
@@ -130,14 +131,17 @@ fn render(area: Rect, rect: Rect, buf: &mut Buffer, id: u8, seq: &mut Option<Str
         symbol.push_str(&format!("\x1b[38;5;{id}m"));
         add_placeholder(&mut symbol, 0, y);
 
-        for x in 1..(area.width.min(rect.width)) {
+        let full_width = area.width.min(rect.width);
+        for x in 1..full_width {
             // Add entire row with positions
             add_placeholder(&mut symbol, x, y);
             // Skip or something may overwrite it
             buf.get_mut(area.left() + x, area.top() + y).set_skip(true);
         }
         symbol.push_str("\x1b[0m"); // Stop messing with styles now.
-        buf.get_mut(area.left(), area.top() + y).set_symbol(&symbol);
+        let cell = buf.get_mut(area.left(), area.top() + y);
+        cell.set_symbol(&symbol);
+        cell.trusted_width = Some(full_width.into());
     }
 }
 
@@ -158,7 +162,16 @@ fn transmit_virtual(img: &DynamicImage, id: u8) -> String {
     let chunks = bytes.chunks(4000);
     let chunk_count = chunks.len();
     for (i, chunk) in chunks.enumerate() {
-        payload = general_purpose::STANDARD.encode(chunk);
+        #[cfg(not(feature = "vb64"))]
+        {
+            payload = general_purpose::STANDARD.encode(chunk);
+        }
+
+        #[cfg(feature = "vb64")]
+        {
+            payload = vb64::encode(chunk);
+        }
+
         match i {
             0 => {
                 // Transmit and virtual-place but keep sending chunks
@@ -489,9 +502,6 @@ static DIACRITICS: [char; 297] = [
 ];
 #[inline]
 fn diacritic(y: u16) -> char {
-    if y >= DIACRITICS.len() as u16 {
-        DIACRITICS[0]
-    } else {
-        DIACRITICS[y as usize]
-    }
+    *DIACRITICS.get(y as usize)
+        .unwrap_or_else(|| &DIACRITICS[0])
 }

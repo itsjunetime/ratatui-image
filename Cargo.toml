@@ -23,6 +23,7 @@ termion = ["dep:termion", "ratatui/termion"]
 termwiz = ["dep:termwiz", "ratatui/termwiz"]
 serde = ["dep:serde"]
 rustix = ["dep:rustix"]
+vb64 = ["dep:vb64"]
 
 [dependencies]
 dyn-clone = "1.0.11"
@@ -35,7 +36,8 @@ serde = { version = "^1.0", optional = true, features = ["derive"] }
 rustix = { version = "^0.38.4", optional = true, features = ["stdio", "termios", "fs"] }
 base64 = { version = "^0.22.1" }
 rand = { version = "0.8.5" }
-ratatui = { version = ">=0.23", default-features = false, features = [] }
+ratatui = { git = "https://github.com/itsjunetime/ratatui.git", default-features = false, features = [] }
+vb64 = { git = "https://github.com/lukaslihotzki/vb64", branch = "update", optional = true }
 
 [[bin]]
 name = "ratatui-image"
