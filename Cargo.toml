@@ -23,6 +23,7 @@ termion = ["dep:termion", "ratatui/termion"]
 termwiz = ["dep:termwiz", "ratatui/termwiz"]
 serde = ["dep:serde"]
 rustix = ["dep:rustix"]
+# This feature can be technically enabled on any machine, but we opt out of using vb64 on machines that have ssse3 extensions but no avx2 since, according to the readme, the encoding performance is much worse than that of the default base64
 vb64 = ["dep:vb64"]
 
 [dependencies]

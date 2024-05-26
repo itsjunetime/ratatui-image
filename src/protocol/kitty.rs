@@ -1,7 +1,7 @@
 /// https://sw.kovidgoyal.net/kitty/graphics-protocol/#unicode-placeholders
 use std::format;
 
-#[cfg(not(feature = "vb64"))]
+#[cfg(not(all(feature = "vb64", any(not(target_feature = "ssse3"), target_feature = "avx2"))))]
 use base64::{engine::general_purpose, Engine};
 use image::{DynamicImage, Rgb};
 use ratatui::{buffer::Buffer, layout::Rect};
@@ -162,12 +162,12 @@ fn transmit_virtual(img: &DynamicImage, id: u8) -> String {
     let chunks = bytes.chunks(4000);
     let chunk_count = chunks.len();
     for (i, chunk) in chunks.enumerate() {
-        #[cfg(not(feature = "vb64"))]
+        #[cfg(not(all(feature = "vb64", any(not(target_feature = "ssse3"), target_feature = "avx2"))))]
         {
             payload = general_purpose::STANDARD.encode(chunk);
         }
 
-        #[cfg(feature = "vb64")]
+        #[cfg(all(feature = "vb64", any(not(target_feature = "ssse3"), target_feature = "avx2")))]
         {
             payload = vb64::encode(chunk);
         }
