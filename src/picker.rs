@@ -121,13 +121,13 @@ impl Picker {
         let source = ImageSource::new(image, self.font_size);
         match self.protocol_type {
             ProtocolType::Halfblocks => Ok(Box::new(Halfblocks::from_source(
-                &source,
+                source,
                 resize,
                 self.background_color,
                 size,
             )?)),
             ProtocolType::Sixel => Ok(Box::new(Sixel::from_source(
-                &source,
+                source,
                 resize,
                 self.background_color,
                 self.is_tmux,
@@ -136,7 +136,7 @@ impl Picker {
             ProtocolType::Kitty => {
                 self.kitty_counter = self.kitty_counter.saturating_add(1);
                 Ok(Box::new(Kitty::from_source(
-                    &source,
+                    source,
                     resize,
                     self.background_color,
                     size,
@@ -144,7 +144,7 @@ impl Picker {
                 )?))
             }
             ProtocolType::Iterm2 => Ok(Box::new(FixedIterm2::from_source(
-                &source,
+                source,
                 resize,
                 self.background_color,
                 self.is_tmux,

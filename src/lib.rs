@@ -226,6 +226,7 @@ pub enum Resize {
     /// For example, the sixel branch of Alacritty never draws text over a cell that is currently
     /// being rendered by some sixel sequence, not necessarily originating from the same cell.
     Crop,
+    None
 }
 
 impl Resize {
@@ -263,6 +264,10 @@ impl Resize {
         area: Rect,
         force: bool,
     ) -> Option<Rect> {
+        if let Resize::None = self {
+            return None
+        };
+
         let desired = image.desired;
         // Check if resize is needed at all.
         if desired.width <= area.width && desired.height <= area.height && desired == current {
@@ -289,6 +294,7 @@ impl Resize {
                     .resize(width, height, filter_type.unwrap_or(DEFAULT_FILTER_TYPE))
             }
             Self::Crop => source.image.crop_imm(0, 0, width, height),
+            Self::None => source.image.clone()
         }
     }
 
@@ -309,6 +315,7 @@ impl Resize {
                 min(desired.width, area.width),
                 min(desired.height, area.height),
             ),
+            Self::None => area,
         }
     }
 }

@@ -25,15 +25,15 @@ impl Kitty {
     /// in more half-blocks for the same image size. To get a size independent of the font size,
     /// the image could be resized in relation to the font size beforehand.
     pub fn from_source(
-        source: &ImageSource,
+        source: ImageSource,
         resize: Resize,
         background_color: Option<Rgb<u8>>,
         area: Rect,
         id: u8,
     ) -> Result<Self> {
         let (image, desired) = resize
-            .resize(source, Rect::default(), area, background_color, false)
-            .unwrap_or_else(|| (source.image.clone(), source.desired));
+            .resize(&source, Rect::default(), area, background_color, false)
+            .unwrap_or_else(|| (source.image, source.desired));
 
         let transmit_data = transmit_virtual(&image, id);
         Ok(Self {

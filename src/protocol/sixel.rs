@@ -25,15 +25,15 @@ pub struct Sixel {
 
 impl Sixel {
     pub fn from_source(
-        source: &ImageSource,
+        source: ImageSource,
         resize: Resize,
         background_color: Option<Rgb<u8>>,
         is_tmux: bool,
         area: Rect,
     ) -> Result<Self> {
         let (img, rect) = resize
-            .resize(source, Rect::default(), area, background_color, false)
-            .unwrap_or_else(|| (source.image.clone(), source.desired));
+            .resize(&source, Rect::default(), area, background_color, false)
+            .unwrap_or_else(|| (source.image, source.desired));
 
         let data = encode(img, is_tmux)?;
         Ok(Self {
