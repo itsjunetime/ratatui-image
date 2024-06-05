@@ -5,6 +5,7 @@ use std::format;
 use base64::{engine::general_purpose, Engine};
 use image::{DynamicImage, Rgb};
 use ratatui::{buffer::Buffer, layout::Rect};
+use rayon::prelude::*;
 
 use crate::{ImageSource, Resize, Result};
 
@@ -33,7 +34,7 @@ impl Kitty {
     ) -> Result<Self> {
         let (image, desired) = resize
             .resize(&source, Rect::default(), area, background_color, false)
-            .unwrap_or_else(|| (source.image, source.desired));
+            .unwrap_or((source.image, source.desired));
 
         let transmit_data = transmit_virtual(&image, id);
         Ok(Self {
@@ -60,7 +61,6 @@ pub struct StatefulKitty {
     source: ImageSource,
     pub unique_id: u8,
     rect: Rect,
-    hash: u64,
     proto_state: KittyProtoState,
 }
 
@@ -77,7 +77,6 @@ impl StatefulKitty {
             source,
             unique_id: id,
             rect: Rect::default(),
-            hash: u64::default(),
             proto_state: KittyProtoState::default(),
         }
     }
@@ -92,12 +91,8 @@ impl StatefulProtocol for StatefulKitty {
             return;
         }
 
-        let force = self.source.hash != self.hash;
-        if let Some((img, rect)) =
-            resize.resize(&self.source, self.rect, area, background_color, force)
-        {
+        if let Some((img, rect)) = resize.resize(&self.source, self.rect, area, background_color, false) {
             let data = transmit_virtual(&img, self.unique_id);
-            self.hash = self.source.hash;
             self.rect = rect;
             self.proto_state = KittyProtoState::TransmitAndPlace(data);
         }
@@ -156,41 +151,41 @@ fn transmit_virtual(img: &DynamicImage, id: u8) -> String {
     let img_rgb8 = img.to_rgb8();
     let bytes = img_rgb8.as_raw();
 
-    let mut str = String::new();
-
-    let mut payload: String;
-    let chunks = bytes.chunks(4000);
+    let chunks = bytes.par_chunks(4000);
     let chunk_count = chunks.len();
-    for (i, chunk) in chunks.enumerate() {
-        #[cfg(not(all(feature = "vb64", any(not(target_feature = "ssse3"), target_feature = "avx2"))))]
-        {
-            payload = general_purpose::STANDARD.encode(chunk);
-        }
 
-        #[cfg(all(feature = "vb64", any(not(target_feature = "ssse3"), target_feature = "avx2")))]
-        {
-            payload = vb64::encode(chunk);
-        }
+    chunks.enumerate()
+        .map(|(i, chunk)| {
+            let payload: String;
 
-        match i {
-            0 => {
-                // Transmit and virtual-place but keep sending chunks
-                let more = if chunk_count > 1 { 1 } else { 0 };
-                str.push_str(&format!(
-                    "\x1b_Gq=2,i={id},a=T,U=1,f=24,t=d,s={w},v={h},m={more};{payload}\x1b\\"
-                ));
+            #[cfg(not(all(feature = "vb64", any(not(target_feature = "ssse3"), target_feature = "avx2"))))]
+            {
+                payload = general_purpose::STANDARD.encode(chunk);
             }
-            n if n + 1 == chunk_count => {
-                // m=0 means over
-                str.push_str(&format!("\x1b_Gq=2,i={id},m=0;{payload}\x1b\\"));
+
+            #[cfg(all(feature = "vb64", any(not(target_feature = "ssse3"), target_feature = "avx2")))]
+            {
+                payload = vb64::encode(chunk);
             }
-            _ => {
-                // Keep adding chunks
-                str.push_str(&format!("\x1b_Gq=2,i={id},m=1;{payload}\x1b\\"));
+
+            match i {
+                0 => {
+                    // Transmit and virtual-place but keep sending chunks
+                    let more = if chunk_count > 1 { 1 } else { 0 };
+                    format!(
+                        "\x1b_Gq=2,i={id},a=T,U=1,f=24,t=d,s={w},v={h},m={more};{payload}\x1b\\"
+                    )
+                }
+                n if n + 1 == chunk_count => {
+                    // m=0 means over
+                    format!("\x1b_Gq=2,i={id},m=0;{payload}\x1b\\")
+                }
+                _ => {
+                    // Keep adding chunks
+                    format!("\x1b_Gq=2,i={id},m=1;{payload}\x1b\\")
+                }
             }
-        }
-    }
-    str
+        }).collect()
 }
 
 fn add_placeholder(str: &mut String, x: u16, y: u16) {

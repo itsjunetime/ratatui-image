@@ -1261,6 +1261,7 @@ dependencies = [
  "image",
  "rand",
  "ratatui",
+ "rayon",
  "rustix",
  "serde",
  "termion 4.0.0",

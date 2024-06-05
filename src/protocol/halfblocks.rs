@@ -97,7 +97,6 @@ impl Protocol for Halfblocks {
 pub struct StatefulHalfblocks {
     source: ImageSource,
     current: Halfblocks,
-    hash: u64,
 }
 
 impl StatefulHalfblocks {
@@ -105,7 +104,6 @@ impl StatefulHalfblocks {
         StatefulHalfblocks {
             source,
             current: Halfblocks::default(),
-            hash: u64::default(),
         }
     }
 }
@@ -119,18 +117,16 @@ impl StatefulProtocol for StatefulHalfblocks {
             return;
         }
 
-        let force = self.source.hash != self.hash;
         if let Some((img, rect)) = resize.resize(
             &self.source,
             self.current.rect,
             area,
             background_color,
-            force,
+            false
         ) {
             let data = encode(&img, rect);
             let current = Halfblocks { data, rect };
             self.current = current;
-            self.hash = self.source.hash;
         }
     }
     fn render(&mut self, area: Rect, buf: &mut Buffer) {

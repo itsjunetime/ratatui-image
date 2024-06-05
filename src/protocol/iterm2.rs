@@ -26,7 +26,7 @@ impl FixedIterm2 {
     ) -> Result<Self> {
         let (img, rect) = resize
             .resize(&source, Rect::default(), area, background_color, false)
-            .unwrap_or_else(|| (source.image, source.desired));
+            .unwrap_or((source.image, source.desired));
 
         let data = encode(img, is_tmux)?;
         Ok(Self {
@@ -120,7 +120,6 @@ fn render_area(rect: Rect, area: Rect, overdraw: bool) -> Option<Rect> {
 pub struct Iterm2State {
     source: ImageSource,
     current: FixedIterm2,
-    hash: u64,
 }
 
 impl Iterm2State {
@@ -131,7 +130,6 @@ impl Iterm2State {
                 is_tmux,
                 ..FixedIterm2::default()
             },
-            hash: u64::default(),
         }
     }
 }
@@ -145,24 +143,20 @@ impl StatefulProtocol for Iterm2State {
             return;
         }
 
-        let force = self.source.hash != self.hash;
         if let Some((img, rect)) = resize.resize(
             &self.source,
             self.current.rect,
             area,
             background_color,
-            force,
+            false,
         ) {
             let is_tmux = self.current.is_tmux;
             match encode(img, is_tmux) {
-                Ok(data) => {
-                    self.current = FixedIterm2 {
-                        data,
-                        rect,
-                        is_tmux,
-                    };
-                    self.hash = self.source.hash;
-                }
+                Ok(data) => self.current = FixedIterm2 {
+                    data,
+                    rect,
+                    is_tmux,
+                },
                 Err(_err) => {
                     // TODO: save err in struct and expose in trait?
                 }

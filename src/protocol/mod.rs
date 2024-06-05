@@ -1,10 +1,5 @@
 //! Protocol backends for the widgets
 
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-};
-
 use dyn_clone::DynClone;
 use image::{DynamicImage, Rgb};
 use ratatui::{buffer::Buffer, layout::Rect};
@@ -87,8 +82,6 @@ pub struct ImageSource {
     pub font_size: FontSize,
     /// The area that the [`ImageSource::image`] covers, but not necessarily fills.
     pub desired: Rect,
-    /// TODO: document this; when image changes but it doesn't need a resize, force a render.
-    pub hash: u64,
 }
 
 impl ImageSource {
@@ -97,15 +90,10 @@ impl ImageSource {
         let desired =
             ImageSource::round_pixel_size_to_cells(image.width(), image.height(), font_size);
 
-        let mut state = DefaultHasher::new();
-        image.as_bytes().hash(&mut state);
-        let hash = state.finish();
-
         ImageSource {
             image,
             font_size,
             desired,
-            hash,
         }
     }
     /// Round an image pixel size to the nearest matching cell size, given a font size.

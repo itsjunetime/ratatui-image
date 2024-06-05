@@ -38,6 +38,7 @@ rustix = { version = "^0.38.4", optional = true, features = ["stdio", "termios",
 base64 = { version = "^0.22.1" }
 rand = { version = "0.8.5" }
 ratatui = { git = "https://github.com/itsjunetime/ratatui.git", default-features = false, features = [] }
+rayon = "1.10.0"
 vb64 = { git = "https://github.com/lukaslihotzki/vb64", branch = "update", optional = true }
 
 [[bin]]
