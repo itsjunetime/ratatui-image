@@ -151,7 +151,7 @@ fn transmit_virtual(img: &DynamicImage, id: u8) -> String {
     let img_rgb8 = img.to_rgb8();
     let bytes = img_rgb8.as_raw();
 
-    let chunks = bytes.par_chunks(4000);
+    let chunks = bytes.par_chunks(30000);
     let chunk_count = chunks.len();
 
     chunks.enumerate()
