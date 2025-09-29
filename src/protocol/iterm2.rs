@@ -1,14 +1,16 @@
 //! ITerm2 protocol implementation.
-use base64::{Engine, engine::general_purpose};
+use std::{cmp::min, fmt::Write, io::Cursor};
+
 use image::DynamicImage;
 use ratatui::{buffer::Buffer, layout::Rect};
-use std::{cmp::min, format, io::Cursor};
 
-use crate::{Result, errors, picker::cap_parser::Parser};
+use crate::{
+    Result,
+    picker::cap_parser::Parser,
+    protocol::{ProtocolTrait, StatefulProtocolTrait},
+};
 
-use super::{ProtocolTrait, StatefulProtocolTrait};
-
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Iterm2 {
     pub data: String,
     pub area: Rect,
@@ -30,7 +32,7 @@ fn encode(img: &DynamicImage, render_area: Rect, is_tmux: bool) -> Result<String
     let mut png: Vec<u8> = vec![];
     img.write_to(&mut Cursor::new(&mut png), image::ImageFormat::Png)?;
 
-    let data = general_purpose::STANDARD.encode(&png);
+    let data = base64_simd::STANDARD.encode_to_string(&png);
 
     let (start, escape, end) = Parser::escape_tmux(is_tmux);
 
@@ -42,25 +44,25 @@ fn encode(img: &DynamicImage, render_area: Rect, is_tmux: bool) -> Result<String
     let height = render_area.height;
     let mut seq = String::from(start);
     for _ in 0..height {
-        seq.push_str(&format!("{escape}[{width}X{escape}[1B").to_string());
+        write!(seq, "{escape}[{width}X{escape}[1B")?;
     }
-    seq.push_str(&format!("{escape}[{height}A").to_string());
+    write!(seq, "{escape}[{height}A")?;
 
-    seq.push_str(&format!(
-        "{escape}]1337;File=inline=1;size={};width={}px;height={}px;doNotMoveCursor=1:{}\x07",
+    write!(
+        seq,
+        "{escape}]1337;File=inline=1;size={};width={}px;height={}px;doNotMoveCursor=1:{}\x07{end}",
         png.len(),
         img.width(),
         img.height(),
         data,
-    ));
-    seq.push_str(end);
+    )?;
 
-    Ok::<String, errors::Errors>(seq)
+    Ok(seq)
 }
 
 impl ProtocolTrait for Iterm2 {
     fn render(&self, area: Rect, buf: &mut Buffer) {
-        render(self.area, &self.data, area, buf, false)
+        render(self.area, &self.data, area, buf, true)
     }
 
     fn area(&self) -> Rect {
@@ -82,15 +84,16 @@ fn render(rect: Rect, data: &str, area: Rect, buf: &mut Buffer, overdraw: bool) 
     };
 
     buf.cell_mut(render_area).map(|cell| cell.set_symbol(data));
-    let mut skip_first = false;
+
+    for x in (render_area.left() + 1)..render_area.right() {
+        if let Some(cell) = buf.cell_mut((x, render_area.top())) {
+            cell.skip = true;
+        }
+    }
 
     // Skip entire area
-    for y in render_area.top()..render_area.bottom() {
+    for y in (render_area.top() + 1)..render_area.bottom() {
         for x in render_area.left()..render_area.right() {
-            if !skip_first {
-                skip_first = true;
-                continue;
-            }
             buf.cell_mut((x, y)).map(|cell| cell.set_skip(true));
         }
     }

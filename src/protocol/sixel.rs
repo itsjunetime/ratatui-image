@@ -5,18 +5,19 @@
 //! [`sixel-bytes`]: https://github.com/benjajaja/sixel-bytes
 //! [supports]: https://arewesixelyet.com
 //! [Sixel]: https://en.wikipedia.org/wiki/Sixel
+use std::cmp::min;
+
 use icy_sixel::{
     DiffusionMethod, MethodForLargest, MethodForRep, PixelFormat, Quality, sixel_string,
 };
 use image::DynamicImage;
 use ratatui::{buffer::Buffer, layout::Rect};
-use std::cmp::min;
 
 use super::{ProtocolTrait, StatefulProtocolTrait};
 use crate::{Result, errors::Errors, picker::cap_parser::Parser};
 
 // Fixed sixel protocol
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Sixel {
     pub data: String,
     pub area: Rect,

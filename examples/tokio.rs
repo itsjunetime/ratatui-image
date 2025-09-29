@@ -1,5 +1,6 @@
 use color_eyre::eyre::Result;
 use crossterm::event::{Event, EventStream};
+use futures::{FutureExt, StreamExt};
 use image::ImageReader;
 use ratatui::{
     DefaultTerminal, Frame,
@@ -14,8 +15,6 @@ use tokio::{
     select,
     sync::mpsc::{UnboundedReceiver, unbounded_channel},
 };
-
-use futures::{FutureExt, StreamExt};
 
 struct App {
     running: bool,

@@ -216,6 +216,7 @@ impl App {
             Resize::Fit(_) => (&mut self.image_fit_state, "Fit", Color::Magenta),
             Resize::Crop(_) => (&mut self.image_crop_state, "Crop", Color::Green),
             Resize::Scale(_) => (&mut self.image_scale_state, "Scale", Color::Blue),
+            Resize::None => (&mut self.image_crop_state, "None", Color::Yellow),
         };
         let block = block(name);
         let inner_area = block.inner(area);

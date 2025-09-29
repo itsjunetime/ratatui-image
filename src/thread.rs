@@ -6,11 +6,11 @@
 
 #[cfg(not(feature = "tokio"))]
 use std::sync::mpsc::Sender;
-#[cfg(feature = "tokio")]
-use tokio::sync::mpsc::UnboundedSender as Sender;
 
 use image::Rgba;
 use ratatui::prelude::{Buffer, Rect};
+#[cfg(feature = "tokio")]
+use tokio::sync::mpsc::UnboundedSender as Sender;
 
 use crate::{
     Resize, ResizeEncodeRender,

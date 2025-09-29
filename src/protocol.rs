@@ -1,10 +1,5 @@
 //! Protocol backends for the widgets
 
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-};
-
 use image::{DynamicImage, ImageBuffer, Rgba, imageops};
 use ratatui::{buffer::Buffer, layout::Rect};
 
@@ -14,9 +9,8 @@ use self::{
     kitty::{Kitty, StatefulKitty},
     sixel::Sixel,
 };
-use crate::{FontSize, ResizeEncodeRender, Result};
-
 use super::Resize;
+use crate::{FontSize, ResizeEncodeRender, Result};
 
 pub mod halfblocks;
 pub mod iterm2;
@@ -41,7 +35,7 @@ trait StatefulProtocolTrait: ProtocolTrait {
 }
 
 /// A fixed-size image protocol for the [crate::Image] widget.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Protocol {
     Halfblocks(Halfblocks),
     Sixel(Sixel),
@@ -51,22 +45,21 @@ pub enum Protocol {
 
 impl Protocol {
     pub(crate) fn render(&self, area: Rect, buf: &mut Buffer) {
-        let inner: &dyn ProtocolTrait = match self {
-            Self::Halfblocks(halfblocks) => halfblocks,
-            Self::Sixel(sixel) => sixel,
-            Self::Kitty(kitty) => kitty,
-            Self::ITerm2(iterm2) => iterm2,
-        };
-        inner.render(area, buf);
+        match self {
+            Self::Halfblocks(halfblocks) => halfblocks.render(area, buf),
+            Self::Sixel(sixel) => sixel.render(area, buf),
+            Self::Kitty(kitty) => kitty.render(area, buf),
+            Self::ITerm2(iterm2) => iterm2.render(area, buf),
+        }
     }
+
     pub fn area(&self) -> Rect {
-        let inner: &dyn ProtocolTrait = match self {
-            Self::Halfblocks(halfblocks) => halfblocks,
-            Self::Sixel(sixel) => sixel,
-            Self::Kitty(kitty) => kitty,
-            Self::ITerm2(iterm2) => iterm2,
-        };
-        inner.area()
+        match self {
+            Self::Halfblocks(halfblocks) => halfblocks.area(),
+            Self::Sixel(sixel) => sixel.area(),
+            Self::Kitty(kitty) => kitty.area(),
+            Self::ITerm2(iterm2) => iterm2.area(),
+        }
     }
 }
 
@@ -77,7 +70,6 @@ impl Protocol {
 pub struct StatefulProtocol {
     source: ImageSource,
     font_size: FontSize,
-    hash: u64,
     protocol_type: StatefulProtocolType,
     last_encoding_result: Option<Result<()>>,
 }
@@ -118,7 +110,6 @@ impl StatefulProtocol {
         Self {
             source,
             font_size,
-            hash: u64::default(),
             protocol_type,
             last_encoding_result: None,
         }
@@ -152,6 +143,10 @@ impl StatefulProtocol {
 }
 
 impl ResizeEncodeRender for StatefulProtocol {
+    /// Resize the image and encode it for rendering. The result should be stored statefully so
+    /// that next call for the given area does not need to redo the work.
+    ///
+    /// This can be done in a background thread, and the result is stored in this [StatefulProtocol].
     fn resize_encode(&mut self, resize: &Resize, area: Rect) {
         if area.width == 0 || area.height == 0 {
             return;
@@ -164,10 +159,6 @@ impl ResizeEncodeRender for StatefulProtocol {
             .protocol_type
             .inner_trait_mut()
             .resize_encode(img, area);
-
-        if result.is_ok() {
-            self.hash = self.source.hash
-        }
 
         self.last_encoding_result = Some(result)
     }
@@ -182,7 +173,6 @@ impl ResizeEncodeRender for StatefulProtocol {
             self.font_size,
             self.last_encoding_area(),
             area,
-            self.source.hash != self.hash,
         )
     }
 }
@@ -207,8 +197,6 @@ pub struct ImageSource {
     pub image: DynamicImage,
     /// The area that the [`ImageSource::image`] covers, but not necessarily fills.
     pub desired: Rect,
-    /// TODO: document this; when image changes but it doesn't need a resize, force a render.
-    pub hash: u64,
     /// The background color that should be used for padding or background when resizing.
     pub background_color: Rgba<u8>,
 }
@@ -223,10 +211,6 @@ impl ImageSource {
         let desired =
             ImageSource::round_pixel_size_to_cells(image.width(), image.height(), font_size);
 
-        let mut state = DefaultHasher::new();
-        image.as_bytes().hash(&mut state);
-        let hash = state.finish();
-
         // We only need to underlay the background color here if it's not completely transparent.
         if background_color.0[3] != 0 {
             let mut bg: DynamicImage =
@@ -238,7 +222,6 @@ impl ImageSource {
         ImageSource {
             image,
             desired,
-            hash,
             background_color,
         }
     }
@@ -248,8 +231,8 @@ impl ImageSource {
         img_height: u32,
         (char_width, char_height): FontSize,
     ) -> Rect {
-        let width = (img_width as f32 / char_width as f32).ceil() as u16;
-        let height = (img_height as f32 / char_height as f32).ceil() as u16;
+        let width = (img_width as f32 / f32::from(char_width)).ceil() as u16;
+        let height = (img_height as f32 / f32::from(char_height)).ceil() as u16;
         Rect::new(0, 0, width, height)
     }
 }

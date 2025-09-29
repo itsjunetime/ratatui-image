@@ -8,10 +8,10 @@ use super::{ProtocolTrait, StatefulProtocolTrait};
 use crate::Result;
 
 // Fixed Halfblocks protocol
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Halfblocks {
     data: Vec<HalfBlock>,
-    area: Rect,
+    pub(crate) area: Rect,
 }
 
 #[derive(Clone, Debug)]
@@ -36,15 +36,15 @@ impl Halfblocks {
 
 fn encode(img: &DynamicImage, rect: Rect) -> Vec<HalfBlock> {
     let img = img.resize_exact(
-        rect.width as u32,
-        (rect.height * 2) as u32,
+        u32::from(rect.width),
+        u32::from(rect.height * 2),
         FilterType::Triangle,
     );
 
     let mut data = vec![
         HalfBlock {
             upper: Color::Rgb(0, 0, 0),
-            lower: Color::Rgb(0, 0, 0),
+            lower: Color::Rgb(0, 0, 0)
         };
         (rect.width * rect.height) as usize
     ];
