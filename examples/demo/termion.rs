@@ -1,8 +1,14 @@
-use std::{error::Error, io, sync::mpsc, thread, time::Duration};
+use std::{
+    error::Error,
+    io::{Write, stdin, stdout},
+    sync::mpsc,
+    thread,
+    time::Duration,
+};
 
 use ratatui::{
     Terminal,
-    backend::{Backend, TermionBackend},
+    backend::TermionBackend,
     termion::{
         event::Key,
         input::{MouseTerminal, TermRead},
@@ -15,7 +21,7 @@ use crate::{App, ui};
 
 pub fn run() -> Result<(), Box<dyn Error>> {
     // setup terminal
-    let stdout = io::stdout()
+    let stdout = stdout()
         .into_raw_mode()
         .unwrap()
         .into_alternate_screen()
@@ -31,7 +37,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> Result<(), Box<dyn Error>> {
+fn run_app(
+    terminal: &mut Terminal<TermionBackend<impl Write>>,
+    mut app: App,
+) -> Result<(), Box<dyn Error>> {
     let events = events(app.tick_rate);
     loop {
         terminal.draw(|f| ui(f, &mut app))?;
@@ -59,7 +68,7 @@ fn events(tick_rate: Duration) -> mpsc::Receiver<Event> {
     let (tx, rx) = mpsc::channel();
     let keys_tx = tx.clone();
     thread::spawn(move || {
-        let stdin = io::stdin();
+        let stdin = stdin();
         for key in stdin.keys().flatten() {
             if let Err(err) = keys_tx.send(Event::Input(key)) {
                 eprintln!("{err}");

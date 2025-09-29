@@ -4,7 +4,14 @@ use std::{
     env,
     io::{self, Read, Write},
     sync::mpsc::Sender,
+    time::{SystemTime, UNIX_EPOCH}
 };
+
+use cap_parser::{Parser, QueryStdioOptions, Response};
+use image::{DynamicImage, Rgba};
+use ratatui::layout::Rect;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::{
     FontSize, ImageSource, Resize, Result,
@@ -17,12 +24,6 @@ use crate::{
         sixel::Sixel,
     },
 };
-use cap_parser::{Parser, QueryStdioOptions, Response};
-use image::{DynamicImage, Rgba};
-use rand::random;
-use ratatui::layout::Rect;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 pub mod cap_parser;
 
@@ -75,6 +76,18 @@ impl ProtocolType {
             ProtocolType::Iterm2 => ProtocolType::Halfblocks,
         }
     }
+}
+
+fn right_now() -> u32 {
+    u32::try_from(
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            // This won't panic 'cause time doesn't go backwards
+            .unwrap()
+            .as_micros()
+            & u128::from(u32::MAX), // this won't panic 'cause we bit-and'ed it with u32::MAX to make sure it won't go over
+    )
+    .unwrap()
 }
 
 /// Helper for building widgets
@@ -242,14 +255,14 @@ impl Picker {
     ) -> Result<Protocol> {
         let source = ImageSource::new(image, self.font_size, self.background_color);
 
-        let (image, area) =
-            match resize.needs_resize(&source, self.font_size, source.desired, size, false) {
-                Some(area) => {
-                    let image = resize.resize(&source, self.font_size, area, self.background_color);
-                    (image, area)
-                }
-                None => (source.image, source.desired),
-            };
+        let (image, area) = match resize.needs_resize(&source, self.font_size, source.desired, size)
+        {
+            Some(area) => {
+                let image = resize.resize(&source, self.font_size, area, self.background_color);
+                (image, area)
+            }
+            None => (source.image, source.desired),
+        };
 
         match self.protocol_type {
             ProtocolType::Halfblocks => Ok(Protocol::Halfblocks(Halfblocks::new(image, area)?)),
@@ -257,7 +270,7 @@ impl Picker {
             ProtocolType::Kitty => Ok(Protocol::Kitty(Kitty::new(
                 image,
                 area,
-                rand::random(),
+                right_now(),
                 self.is_tmux,
             )?)),
             ProtocolType::Iterm2 => Ok(Protocol::ITerm2(Iterm2::new(image, area, self.is_tmux)?)),
@@ -274,7 +287,7 @@ impl Picker {
                 ..Sixel::default()
             }),
             ProtocolType::Kitty => {
-                StatefulProtocolType::Kitty(StatefulKitty::new(random(), self.is_tmux))
+                StatefulProtocolType::Kitty(StatefulKitty::new(right_now(), self.is_tmux))
             }
             ProtocolType::Iterm2 => StatefulProtocolType::ITerm2(Iterm2 {
                 is_tmux: self.is_tmux,
@@ -487,32 +500,27 @@ fn interpret_parser_responses(
 
     let mut cursor_position_reports = vec![];
     for response in &responses {
-        if let Some(capability) = match response {
+        match response {
             Response::Kitty => {
                 proto = Some(ProtocolType::Kitty);
-                Some(Capability::Kitty)
+                capabilities.push(Capability::Kitty)
             }
             Response::Sixel => {
                 if proto.is_none() {
                     // Only if kitty is not supported.
                     proto = Some(ProtocolType::Sixel);
                 }
-                Some(Capability::Sixel)
+                capabilities.push(Capability::Sixel)
             }
-            Response::RectangularOps => Some(Capability::RectangularOps),
+            Response::RectangularOps => capabilities.push(Capability::RectangularOps),
             Response::CellSize(cell_size) => {
                 if let Some((w, h)) = cell_size {
                     font_size = Some((*w, *h));
                 }
-                Some(Capability::CellSize(*cell_size))
+                capabilities.push(Capability::CellSize(*cell_size))
             }
-            Response::CursorPositionReport(x, y) => {
-                cursor_position_reports.push((x, y));
-                None
-            }
-            Response::Status => None,
-        } {
-            capabilities.push(capability);
+            Response::CursorPositionReport(x, y) => cursor_position_reports.push((x, y)),
+            Response::Status => (),
         }
     }
 
@@ -592,9 +600,8 @@ fn query_with_timeout(
 mod tests {
     use std::assert_eq;
 
-    use crate::picker::{Capability, Picker, ProtocolType};
-
     use super::{cap_parser::Response, interpret_parser_responses};
+    use crate::picker::{Capability, Picker, ProtocolType};
 
     #[test]
     fn test_cycle_protocol() {

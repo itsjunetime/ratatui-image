@@ -1,3 +1,4 @@
+
 //! Sixel protocol implementations.
 //! Uses [`icy_sixel`] to draw image pixels, if the terminal [supports] the [Sixel] protocol.
 //! Needs the `sixel` feature.
@@ -5,16 +6,18 @@
 //! [`icy_sixel`]: https://github.com/mkrueger/icy_sixel
 //! [supports]: https://arewesixelyet.com
 //! [Sixel]: https://en.wikipedia.org/wiki/Sixel
+use std::{cmp::min, fmt::Write};
+
+
 use icy_sixel::{EncodeOptions, sixel_encode};
 use image::DynamicImage;
 use ratatui::{buffer::Buffer, layout::Rect};
-use std::{cmp::min, fmt::Write};
 
 use super::{ProtocolTrait, StatefulProtocolTrait};
 use crate::{Result, errors::Errors, picker::cap_parser::Parser};
 
 // Fixed sixel protocol
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Sixel {
     pub data: String,
     pub area: Rect,

@@ -3,11 +3,9 @@ use image::DynamicImage;
 use ratatui::{buffer::Buffer, layout::Rect};
 use std::{cmp::min, fmt::Write, io::Cursor};
 
-use crate::{Result, picker::cap_parser::Parser};
+use crate::{Result, picker::cap_parser::Parser, protocol::{ProtocolTrait, StatefulProtocolTrait}};
 
-use super::{ProtocolTrait, StatefulProtocolTrait};
-
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Iterm2 {
     pub data: String,
     pub area: Rect,
@@ -61,7 +59,7 @@ fn encode(img: &DynamicImage, render_area: Rect, is_tmux: bool) -> Result<String
 
 impl ProtocolTrait for Iterm2 {
     fn render(&self, area: Rect, buf: &mut Buffer) {
-        render(self.area, &self.data, area, buf, false)
+        render(self.area, &self.data, area, buf, true)
     }
 
     fn area(&self) -> Rect {

@@ -1,15 +1,17 @@
 /// https://sw.kovidgoyal.net/kitty/graphics-protocol/#unicode-placeholders
 use std::fmt::Write;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 
-use crate::{Result, picker::cap_parser::Parser};
 use image::DynamicImage;
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use super::{ProtocolTrait, StatefulProtocolTrait};
+use crate::{Result, picker::cap_parser::Parser};
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 struct KittyProtoState {
     transmitted: Arc<AtomicBool>,
     transmit_str: Option<String>,
@@ -42,10 +44,10 @@ impl KittyProtoState {
 }
 
 // Fixed Kitty protocol (transmits once via AtomicBool).
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Kitty {
     proto_state: KittyProtoState,
-    area: Rect,
+    pub(crate) area: Rect,
 }
 
 impl Kitty {

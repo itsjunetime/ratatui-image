@@ -28,10 +28,10 @@ mod chafa;
 mod primitive;
 
 /// Fixed Halfblocks protocol
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Halfblocks {
     data: Vec<HalfBlock>,
-    area: Rect,
+    pub(crate) area: Rect,
 }
 
 #[derive(Clone, Debug)]

@@ -307,6 +307,7 @@ pub enum Resize {
     ///
     /// Same as `Resize::Fit` except it resizes the image even if the image is smaller than the render area
     Scale(Option<FilterType>),
+    None,
 }
 
 impl Default for Resize {
@@ -358,12 +359,15 @@ impl Resize {
         font_size: FontSize,
         current: Rect,
         area: Rect,
-        force: bool,
     ) -> Option<Rect> {
+        if let Resize::None = self {
+            return None;
+        };
+
         let desired = image.desired;
+
         // Check if resize is needed at all.
-        if !force
-            && !matches!(self, &Resize::Scale(_))
+        if !matches!(self, &Resize::Scale(_))
             && desired.width <= area.width
             && desired.height <= area.height
             && desired == current
@@ -381,10 +385,7 @@ impl Resize {
             rect.height <= area.height,
             "needs_resize exceeds area height"
         );
-        if force || rect != current {
-            return Some(rect);
-        }
-        None
+        (rect != current).then_some(rect)
     }
 
     pub fn render_area(&self, image: &ImageSource, font_size: FontSize, available: Rect) -> Rect {
@@ -421,6 +422,7 @@ impl Resize {
                 };
                 image.crop_imm(x, y, width, height)
             }
+            Self::None => source.image.clone(),
         }
     }
 
@@ -432,9 +434,9 @@ impl Resize {
                 min(width, image.width()),
                 min(height, image.height()),
             ),
-
             Self::Crop(_) => (min(image.width(), width), min(image.height(), height)),
             Self::Scale(_) => fit_area_proportionally(image.width(), image.height(), width, height),
+            Self::None => (width, height),
         }
     }
 }
@@ -453,8 +455,8 @@ fn fit_area_proportionally(width: u32, height: u32, nwidth: u32, nheight: u32) -
 
     let ratio = f64::min(wratio, hratio);
 
-    let nw = max((width as f64 * ratio).round() as u64, 1);
-    let nh = max((height as f64 * ratio).round() as u64, 1);
+    let nw = max((f64::from(width) * ratio).round() as u64, 1);
+    let nh = max((f64::from(height) * ratio).round() as u64, 1);
 
     if nw > u64::from(u16::MAX) {
         let ratio = u16::MAX as f64 / width as f64;
@@ -489,31 +491,31 @@ mod tests {
     fn needs_resize_fit() {
         let resize = Resize::Fit(None);
 
-        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(10, 10), r(10, 10), false);
+        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(10, 10), r(10, 10));
         assert_eq!(None, to);
 
-        let to = resize.needs_resize(&s(101, 101), FONT_SIZE, r(10, 10), r(10, 10), false);
+        let to = resize.needs_resize(&s(101, 101), FONT_SIZE, r(10, 10), r(10, 10));
         assert_eq!(None, to);
 
-        let to = resize.needs_resize(&s(80, 100), FONT_SIZE, r(8, 10), r(10, 10), false);
+        let to = resize.needs_resize(&s(80, 100), FONT_SIZE, r(8, 10), r(10, 10));
         assert_eq!(None, to);
 
-        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(99, 99), r(8, 10), false);
+        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(99, 99), r(8, 10));
         assert_eq!(Some(r(8, 8)), to);
 
-        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(99, 99), r(10, 8), false);
+        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(99, 99), r(10, 8));
         assert_eq!(Some(r(8, 8)), to);
 
-        let to = resize.needs_resize(&s(100, 50), FONT_SIZE, r(99, 99), r(4, 4), false);
+        let to = resize.needs_resize(&s(100, 50), FONT_SIZE, r(99, 99), r(4, 4));
         assert_eq!(Some(r(4, 2)), to);
 
-        let to = resize.needs_resize(&s(50, 100), FONT_SIZE, r(99, 99), r(4, 4), false);
+        let to = resize.needs_resize(&s(50, 100), FONT_SIZE, r(99, 99), r(4, 4));
         assert_eq!(Some(r(2, 4)), to);
 
-        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(8, 8), r(11, 11), false);
+        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(8, 8), r(11, 11));
         assert_eq!(Some(r(10, 10)), to);
 
-        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(10, 10), r(11, 11), false);
+        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(10, 10), r(11, 11));
         assert_eq!(None, to);
     }
 
@@ -521,16 +523,16 @@ mod tests {
     fn needs_resize_crop() {
         let resize = Resize::Crop(None);
 
-        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(10, 10), r(10, 10), false);
+        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(10, 10), r(10, 10));
         assert_eq!(None, to);
 
-        let to = resize.needs_resize(&s(80, 100), FONT_SIZE, r(8, 10), r(10, 10), false);
+        let to = resize.needs_resize(&s(80, 100), FONT_SIZE, r(8, 10), r(10, 10));
         assert_eq!(None, to);
 
-        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(10, 10), r(8, 10), false);
+        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(10, 10), r(8, 10));
         assert_eq!(Some(r(8, 10)), to);
 
-        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(10, 10), r(10, 8), false);
+        let to = resize.needs_resize(&s(100, 100), FONT_SIZE, r(10, 10), r(10, 8));
         assert_eq!(Some(r(10, 8)), to);
     }
 }
