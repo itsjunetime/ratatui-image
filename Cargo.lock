@@ -1775,7 +1775,7 @@ dependencies = [
 [[package]]
 name = "ratatui"
 version = "0.30.0-beta.0"
-source = "git+https://github.com/itsjunetime/ratatui.git#6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43"
+source = "git+https://github.com/itsjunetime/ratatui.git?rev=6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43#6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43"
 dependencies = [
  "instability",
  "ratatui-core",
@@ -1788,7 +1788,7 @@ dependencies = [
 [[package]]
 name = "ratatui-core"
 version = "0.1.0-beta.0"
-source = "git+https://github.com/itsjunetime/ratatui.git#6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43"
+source = "git+https://github.com/itsjunetime/ratatui.git?rev=6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43#6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43"
 dependencies = [
  "bitflags 2.10.0",
  "compact_str",
@@ -1807,7 +1807,7 @@ dependencies = [
 [[package]]
 name = "ratatui-crossterm"
 version = "0.1.0-beta.0"
-source = "git+https://github.com/itsjunetime/ratatui.git#6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43"
+source = "git+https://github.com/itsjunetime/ratatui.git?rev=6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43#6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43"
 dependencies = [
  "cfg-if",
  "crossterm",
@@ -1838,7 +1838,7 @@ dependencies = [
 [[package]]
 name = "ratatui-termion"
 version = "0.1.0-beta.0"
-source = "git+https://github.com/itsjunetime/ratatui.git#6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43"
+source = "git+https://github.com/itsjunetime/ratatui.git?rev=6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43#6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43"
 dependencies = [
  "instability",
  "ratatui-core",
@@ -1848,7 +1848,7 @@ dependencies = [
 [[package]]
 name = "ratatui-termwiz"
 version = "0.1.0-beta.0"
-source = "git+https://github.com/itsjunetime/ratatui.git#6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43"
+source = "git+https://github.com/itsjunetime/ratatui.git?rev=6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43#6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43"
 dependencies = [
  "ratatui-core",
  "termwiz",
@@ -1857,7 +1857,7 @@ dependencies = [
 [[package]]
 name = "ratatui-widgets"
 version = "0.3.0-beta.0"
-source = "git+https://github.com/itsjunetime/ratatui.git#6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43"
+source = "git+https://github.com/itsjunetime/ratatui.git?rev=6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43#6a0b8ddf76ed9ecd88578766f5c90e8938bf0c43"
 dependencies = [
  "bitflags 2.10.0",
  "hashbrown",

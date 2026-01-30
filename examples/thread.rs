@@ -34,23 +34,24 @@ enum AppEvent {
     Tick,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut terminal = ratatui::init();
 
     let picker = Picker::from_query_stdio()?;
     let dyn_img = image::ImageReader::open("./assets/NixOS.png")?.decode()?;
 
     // Send a [ResizeProtocol] to resize and encode it in a separate thread.
-    let (tx_worker, rec_worker) = mpsc::channel::<ResizeRequest>();
+    let (tx_worker, mut rec_worker) = tokio::sync::mpsc::unbounded_channel::<ResizeRequest>();
 
     // Send UI-events and the [ResizeProtocol] result back to main thread.
     let (tx_main, rec_main) = mpsc::channel();
 
     // Resize and encode in background thread.
     let tx_main_render = tx_main.clone();
-    thread::spawn(move || {
+    tokio::spawn(async move {
         loop {
-            if let Ok(request) = rec_worker.recv() {
+            if let Some(request) = rec_worker.recv().await {
                 tx_main_render
                     .send(AppEvent::Redraw(request.resize_encode()))
                     .unwrap();
