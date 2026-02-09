@@ -107,6 +107,11 @@ impl Picker {
         Picker::from_query_stdio_with_options(QueryStdioOptions::default())
     }
 
+    /// Returns `true` if this picker detected that it's running under tmux, false otherwise
+    pub fn is_tmux(&self) -> bool {
+        self.is_tmux
+    }
+
     /// This should ONLY be used if [Capability::TextSizingProtocol] is needed for some external
     /// reason.
     ///
